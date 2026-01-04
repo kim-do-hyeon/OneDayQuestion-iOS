@@ -74,7 +74,7 @@ struct MainView: View {
                     .offset(y: show ? 0 : 12)
                 }
 
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading) {
                     Text(questionTitle)
                         .font(.custom("AvenirNext-Bold", size: 22))
                         .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))

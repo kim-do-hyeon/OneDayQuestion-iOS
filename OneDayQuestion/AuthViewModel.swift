@@ -26,6 +26,9 @@ final class AuthViewModel: ObservableObject {
 
     init(service: AuthService = AuthService()) {
         self.service = service
+        Task {
+            await restoreSession()
+        }
     }
 
     var isSignup: Bool {
@@ -77,6 +80,7 @@ final class AuthViewModel: ObservableObject {
             } else {
                 let token = try await service.login(identifier: emailOrUsername, password: password)
                 accessToken = token.accessToken
+                KeychainService.saveToken(token.accessToken)
                 let profile = try await service.fetchMe(token: token.accessToken)
                 isAdmin = profile.isAdmin
                 successMessage = "환영합니다!"
@@ -90,6 +94,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     func signOut() {
+        KeychainService.deleteToken()
         accessToken = nil
         isLoggedIn = false
         isAdmin = false
@@ -98,5 +103,29 @@ final class AuthViewModel: ObservableObject {
         confirmPassword = ""
         errorMessage = nil
         successMessage = nil
+    }
+
+    private func restoreSession() async {
+        guard let token = KeychainService.loadToken() else {
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        successMessage = nil
+
+        do {
+            let profile = try await service.fetchMe(token: token)
+            accessToken = token
+            isAdmin = profile.isAdmin
+            isLoggedIn = true
+        } catch {
+            KeychainService.deleteToken()
+            accessToken = nil
+            isAdmin = false
+            isLoggedIn = false
+        }
+
+        isLoading = false
     }
 }

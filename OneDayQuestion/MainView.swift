@@ -321,9 +321,25 @@ struct MainView: View {
 
                 Spacer()
 
-                Text("\(answer.likeCount) 추천")
-                    .font(.custom("AvenirNext-Regular", size: 12))
-                    .foregroundStyle(Color(red: 0.44, green: 0.38, blue: 0.30))
+                HStack(spacing: 8) {
+                    Button {
+                        viewModel.likeAnswer(answerId: answer.id, token: authToken)
+                    } label: {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 26, height: 26)
+                            .background(
+                                Circle()
+                                    .fill(Color(red: 0.86, green: 0.34, blue: 0.32))
+                            )
+                    }
+                    .disabled(viewModel.likingAnswerIds.contains(answer.id))
+
+                    Text("\(answer.likeCount)")
+                        .font(.custom("AvenirNext-Regular", size: 12))
+                        .foregroundStyle(Color(red: 0.44, green: 0.38, blue: 0.30))
+                }
             }
 
             Text(answer.content)

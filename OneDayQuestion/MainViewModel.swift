@@ -26,6 +26,7 @@ final class MainViewModel: ObservableObject {
     @Published var myAnswerIsPublic = true
     @Published var didSaveAnswer = false
     @Published var currentUserId: Int?
+    @Published var likingAnswerIds: Set<Int> = []
 
     private let service: QuestionService
     private let pageSize = 10
@@ -82,6 +83,12 @@ final class MainViewModel: ObservableObject {
         guard visibleAnswers.count < answers.count else { return }
         let nextCount = min(visibleAnswers.count + pageSize, answers.count)
         visibleAnswers = Array(answers.prefix(nextCount))
+    }
+
+    func likeAnswer(answerId: Int, token: String?) {
+        Task {
+            await sendLike(answerId: answerId, token: token)
+        }
     }
 
     private func fetchTodayQuestion() async {
@@ -193,5 +200,48 @@ final class MainViewModel: ObservableObject {
         }
 
         isLoadingAnswers = false
+    }
+
+    private func sendLike(answerId: Int, token: String?) async {
+        guard let token else {
+            answersNotice = "로그인이 필요합니다."
+            return
+        }
+        guard !likingAnswerIds.contains(answerId) else { return }
+
+        likingAnswerIds.insert(answerId)
+        defer { likingAnswerIds.remove(answerId) }
+
+        do {
+            let newCount = try await service.likeAnswer(answerId: answerId, token: token)
+            answers = answers.map { answer in
+                guard answer.id == answerId else { return answer }
+                return AnswerPublic(
+                    id: answer.id,
+                    userId: answer.userId,
+                    questionId: answer.questionId,
+                    content: answer.content,
+                    isPublic: answer.isPublic,
+                    createdAt: answer.createdAt,
+                    updatedAt: answer.updatedAt,
+                    likeCount: newCount
+                )
+            }
+            visibleAnswers = visibleAnswers.map { answer in
+                guard answer.id == answerId else { return answer }
+                return AnswerPublic(
+                    id: answer.id,
+                    userId: answer.userId,
+                    questionId: answer.questionId,
+                    content: answer.content,
+                    isPublic: answer.isPublic,
+                    createdAt: answer.createdAt,
+                    updatedAt: answer.updatedAt,
+                    likeCount: newCount
+                )
+            }
+        } catch {
+            answersNotice = error.localizedDescription
+        }
     }
 }

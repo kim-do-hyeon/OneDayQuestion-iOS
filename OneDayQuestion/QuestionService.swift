@@ -241,6 +241,42 @@ final class QuestionService {
         }
     }
 
+    func likeAnswer(answerId: Int, token: String) async throws -> Int {
+        let url = baseURL.appendingPathComponent("answers/\(answerId)/like")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw QuestionServiceError.invalidResponse
+        }
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let apiError = try? decoder.decode(APIErrorResponse.self, from: data),
+               let detail = apiError.detail {
+                throw QuestionServiceError.api(detail)
+            }
+            throw QuestionServiceError.api("요청에 실패했습니다. (\(httpResponse.statusCode))")
+        }
+
+        struct LikeResponse: Decodable {
+            let answerId: Int
+            let likeCount: Int
+
+            enum CodingKeys: String, CodingKey {
+                case answerId = "answer_id"
+                case likeCount = "like_count"
+            }
+        }
+
+        do {
+            let result = try decoder.decode(LikeResponse.self, from: data)
+            return result.likeCount
+        } catch {
+            throw QuestionServiceError.invalidResponse
+        }
+    }
+
     private static func parseDate(_ value: String) -> Date? {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

@@ -260,6 +260,24 @@ struct MainView: View {
                 .foregroundStyle(Color(red: 0.28, green: 0.24, blue: 0.18))
 
             if viewModel.isAnswersUnlocked {
+                HStack(spacing: 10) {
+                    ForEach(MainViewModel.AnswerSort.allCases, id: \.self) { option in
+                        Button {
+                            viewModel.setAnswerSort(option)
+                        } label: {
+                            Text(option.rawValue)
+                                .font(.custom("AvenirNext-DemiBold", size: 13))
+                                .foregroundStyle(viewModel.answerSort == option ? Color.white : Color(red: 0.28, green: 0.24, blue: 0.18))
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(viewModel.answerSort == option ? Color(red: 0.20, green: 0.18, blue: 0.12) : Color.white.opacity(0.7))
+                                )
+                        }
+                    }
+                }
+
                 if viewModel.isLoadingAnswers {
                     ProgressView()
                         .frame(maxWidth: .infinity)
@@ -278,22 +296,26 @@ struct MainView: View {
                     }
                 }
             } else {
-                Button {
-                    viewModel.unlockAnswers(token: authToken)
-                } label: {
-                    HStack {
-                        Spacer()
-                        Text("다른 사람의 답변 보기")
-                            .font(.custom("AvenirNext-Bold", size: 15))
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
-                    .foregroundStyle(Color.white)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
+                lockedAnswers
+                    .overlay(
+                        Button {
+                            viewModel.unlockAnswers(token: authToken)
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("다른 사람의 답변 보기")
+                                    .font(.custom("AvenirNext-Bold", size: 15))
+                                Spacer()
+                            }
+                            .padding(.vertical, 12)
+                            .foregroundStyle(Color.white)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
+                            )
+                            .padding(.horizontal, 24)
+                        }
                     )
-                }
 
                 if let notice = viewModel.answersNotice {
                     Text(notice)
@@ -310,6 +332,37 @@ struct MainView: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
         )
         .transition(.opacity)
+    }
+
+    private var lockedAnswers: some View {
+        VStack(spacing: 10) {
+            ForEach(0..<3, id: \.self) { index in
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color(red: 0.92, green: 0.90, blue: 0.86).opacity(0.95))
+                        .blur(radius: 10)
+
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.75), lineWidth: 1)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.95))
+                            .frame(height: 10)
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.9))
+                            .frame(height: 10)
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.85))
+                            .frame(width: 190, height: 10)
+                    }
+                    .padding(16)
+                    .blur(radius: 2)
+                }
+                .frame(height: index == 1 ? 90 : 74)
+            }
+        }
+        .opacity(0.9)
     }
 
     private func answerRow(_ answer: AnswerPublic) -> some View {

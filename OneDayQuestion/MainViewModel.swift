@@ -10,6 +10,11 @@ import Combine
 
 @MainActor
 final class MainViewModel: ObservableObject {
+    enum AnswerSort: String, CaseIterable {
+        case latest = "최신순"
+        case likes = "좋아요순"
+    }
+
     @Published var question: QuestionPublic?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -27,6 +32,7 @@ final class MainViewModel: ObservableObject {
     @Published var didSaveAnswer = false
     @Published var currentUserId: Int?
     @Published var likingAnswerIds: Set<Int> = []
+    @Published var answerSort: AnswerSort = .latest
 
     private let service: QuestionService
     private let pageSize = 10
@@ -80,9 +86,17 @@ final class MainViewModel: ObservableObject {
     }
 
     func loadMoreAnswers() {
-        guard visibleAnswers.count < answers.count else { return }
-        let nextCount = min(visibleAnswers.count + pageSize, answers.count)
-        visibleAnswers = Array(answers.prefix(nextCount))
+        let sorted = sortedAnswers()
+        guard visibleAnswers.count < sorted.count else { return }
+        let nextCount = min(visibleAnswers.count + pageSize, sorted.count)
+        visibleAnswers = Array(sorted.prefix(nextCount))
+    }
+
+    func setAnswerSort(_ sort: AnswerSort) {
+        answerSort = sort
+        let currentCount = visibleAnswers.count
+        let sorted = sortedAnswers()
+        visibleAnswers = Array(sorted.prefix(max(currentCount, min(pageSize, sorted.count))))
     }
 
     func likeAnswer(answerId: Int, token: String?) {
@@ -191,7 +205,7 @@ final class MainViewModel: ObservableObject {
                 return answer.userId != currentUserId
             }
             answers = filtered
-            visibleAnswers = Array(filtered.prefix(pageSize))
+            visibleAnswers = Array(sortedAnswers().prefix(pageSize))
             if filtered.isEmpty {
                 answersNotice = "아직 공개 답변이 없습니다."
             }
@@ -227,21 +241,26 @@ final class MainViewModel: ObservableObject {
                     likeCount: newCount
                 )
             }
-            visibleAnswers = visibleAnswers.map { answer in
-                guard answer.id == answerId else { return answer }
-                return AnswerPublic(
-                    id: answer.id,
-                    userId: answer.userId,
-                    questionId: answer.questionId,
-                    content: answer.content,
-                    isPublic: answer.isPublic,
-                    createdAt: answer.createdAt,
-                    updatedAt: answer.updatedAt,
-                    likeCount: newCount
-                )
-            }
+            let currentCount = visibleAnswers.count
+            visibleAnswers = Array(sortedAnswers().prefix(currentCount))
         } catch {
             answersNotice = error.localizedDescription
+        }
+    }
+
+    private func sortedAnswers() -> [AnswerPublic] {
+        switch answerSort {
+        case .latest:
+            return answers.sorted { lhs, rhs in
+                lhs.createdAt > rhs.createdAt
+            }
+        case .likes:
+            return answers.sorted { lhs, rhs in
+                if lhs.likeCount == rhs.likeCount {
+                    return lhs.createdAt > rhs.createdAt
+                }
+                return lhs.likeCount > rhs.likeCount
+            }
         }
     }
 }

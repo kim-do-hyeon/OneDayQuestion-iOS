@@ -84,6 +84,7 @@ struct MainView: View {
                         .foregroundStyle(Color(red: 0.32, green: 0.28, blue: 0.22))
                 }
                 .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(Color.white.opacity(0.85))
@@ -109,6 +110,7 @@ struct MainView: View {
                     )
                     .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 10)
                 }
+                .frame(maxWidth: .infinity)
                 .opacity(show ? 1 : 0)
                 .offset(y: show ? 0 : 20)
 

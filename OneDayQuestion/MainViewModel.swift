@@ -16,8 +16,19 @@ final class MainViewModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var adminNotice: String?
     @Published var answerNotice: String?
+    @Published var answers: [AnswerPublic] = []
+    @Published var visibleAnswers: [AnswerPublic] = []
+    @Published var answersNotice: String?
+    @Published var isLoadingAnswers = false
+    @Published var hasAnswered = false
+    @Published var isAnswersUnlocked = false
+    @Published var myAnswerContent: String?
+    @Published var myAnswerIsPublic = true
+    @Published var didSaveAnswer = false
+    @Published var currentUserId: Int?
 
     private let service: QuestionService
+    private let pageSize = 10
 
     init(service: QuestionService = QuestionService()) {
         self.service = service
@@ -39,6 +50,38 @@ final class MainViewModel: ObservableObject {
         Task {
             await createAnswer(content: content, isPublic: isPublic, token: token)
         }
+    }
+
+    func loadAnswers(token: String?) {
+        Task {
+            await fetchPublicAnswers(token: token)
+        }
+    }
+
+    func setCurrentUserId(_ userId: Int?) {
+        currentUserId = userId
+    }
+
+    func checkMyAnswer(token: String?) {
+        Task {
+            await fetchMyAnswer(token: token)
+        }
+    }
+
+    func unlockAnswers(token: String?) {
+        answersNotice = nil
+        guard hasAnswered else {
+            answersNotice = "답변을 작성해야 다른 사람의 답변을 볼 수 있어요."
+            return
+        }
+        isAnswersUnlocked = true
+        loadAnswers(token: token)
+    }
+
+    func loadMoreAnswers() {
+        guard visibleAnswers.count < answers.count else { return }
+        let nextCount = min(visibleAnswers.count + pageSize, answers.count)
+        visibleAnswers = Array(answers.prefix(nextCount))
     }
 
     private func fetchTodayQuestion() async {
@@ -95,10 +138,60 @@ final class MainViewModel: ObservableObject {
         do {
             _ = try await service.submitTodayAnswer(content: trimmed, isPublic: isPublic, token: token)
             answerNotice = "답변이 저장되었습니다."
+            hasAnswered = true
+            myAnswerContent = trimmed
+            myAnswerIsPublic = isPublic
+            didSaveAnswer = true
+            if isAnswersUnlocked {
+                await fetchPublicAnswers(token: token)
+            }
         } catch {
             answerNotice = error.localizedDescription
         }
 
         isSubmitting = false
+    }
+
+    private func fetchMyAnswer(token: String?) async {
+        guard let token else {
+            return
+        }
+        do {
+            let response = try await service.fetchMyAnswer(token: token)
+            hasAnswered = true
+            myAnswerContent = response.content
+            myAnswerIsPublic = response.isPublic
+        } catch {
+            hasAnswered = false
+            myAnswerContent = nil
+            myAnswerIsPublic = true
+        }
+    }
+
+    private func fetchPublicAnswers(token: String?) async {
+        guard let token else {
+            answersNotice = "로그인이 필요합니다."
+            return
+        }
+
+        isLoadingAnswers = true
+        answersNotice = nil
+
+        do {
+            let list = try await service.fetchPublicAnswers(token: token)
+            let filtered = list.filter { answer in
+                guard let currentUserId else { return true }
+                return answer.userId != currentUserId
+            }
+            answers = filtered
+            visibleAnswers = Array(filtered.prefix(pageSize))
+            if filtered.isEmpty {
+                answersNotice = "아직 공개 답변이 없습니다."
+            }
+        } catch {
+            answersNotice = error.localizedDescription
+        }
+
+        isLoadingAnswers = false
     }
 }

@@ -22,7 +22,8 @@ struct ContentView: View {
                 MainView(
                     onLogout: viewModel.signOut,
                     isAdmin: viewModel.isAdmin,
-                    authToken: viewModel.accessToken
+                    authToken: viewModel.accessToken,
+                    currentUserId: viewModel.userId
                 )
             } else {
                 ZStack {

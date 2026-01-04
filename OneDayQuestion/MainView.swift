@@ -19,6 +19,7 @@ struct MainView: View {
     @State private var isPublicAnswer = true
     let isAdmin: Bool
     let authToken: String?
+    let currentUserId: Int?
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
@@ -35,103 +36,121 @@ struct MainView: View {
             )
             .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("오늘의 질문")
-                            .font(.custom("AvenirNext-DemiBold", size: 16))
-                            .foregroundStyle(Color(red: 0.32, green: 0.28, blue: 0.22))
-                        Text("OneDay")
-                            .font(.custom("AvenirNext-Bold", size: 30))
-                            .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.12))
-                    }
-
-                    Spacer()
-
-                    Button("로그아웃") {
-                        onLogout()
-                    }
-                    .font(.custom("AvenirNext-DemiBold", size: 13))
-                    .foregroundStyle(Color(red: 0.52, green: 0.36, blue: 0.15))
-                }
-
-                if isAdmin {
-                    Button {
-                        showAdminSheet = true
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("관리자 질문 등록")
-                                .font(.custom("AvenirNext-DemiBold", size: 15))
-                        }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 14)
-                        .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.white.opacity(0.85))
-                        )
-                    }
-                    .opacity(show ? 1 : 0)
-                    .offset(y: show ? 0 : 12)
-                }
-
-                VStack(alignment: .leading) {
-                    Text(questionTitle)
-                        .font(.custom("AvenirNext-Bold", size: 22))
-                        .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))
-
-                    Text(questionSubtitle)
-                        .font(.custom("AvenirNext-Regular", size: 15))
-                        .foregroundStyle(Color(red: 0.32, green: 0.28, blue: 0.22))
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.white.opacity(0.85))
-                        .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
-                )
-                .opacity(show ? 1 : 0)
-                .offset(y: show ? 0 : 14)
-
-                if showAnswerEditor {
-                    answerEditor
-                }
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        showAnswerEditor.toggle()
-                    }
-                } label: {
+            ScrollView(showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 24) {
                     HStack {
-                        Spacer()
-                        Text(showAnswerEditor ? "작성 닫기" : "작성하러 가기")
-                            .font(.custom("AvenirNext-Bold", size: 17))
-                        Spacer()
-                    }
-                    .padding(.vertical, 14)
-                    .foregroundStyle(Color.white)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
-                    )
-                    .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 10)
-                }
-                .frame(maxWidth: .infinity)
-                .opacity(show ? 1 : 0)
-                .offset(y: show ? 0 : 20)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("오늘의 질문")
+                                .font(.custom("AvenirNext-DemiBold", size: 16))
+                                .foregroundStyle(Color(red: 0.32, green: 0.28, blue: 0.22))
+                            Text("OneDay")
+                                .font(.custom("AvenirNext-Bold", size: 30))
+                                .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.12))
+                        }
 
-                Spacer()
+                        Spacer()
+
+                        Button("로그아웃") {
+                            onLogout()
+                        }
+                        .font(.custom("AvenirNext-DemiBold", size: 13))
+                        .foregroundStyle(Color(red: 0.52, green: 0.36, blue: 0.15))
+                    }
+
+                    if isAdmin {
+                        Button {
+                            showAdminSheet = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("관리자 질문 등록")
+                                    .font(.custom("AvenirNext-DemiBold", size: 15))
+                            }
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.white.opacity(0.85))
+                            )
+                        }
+                        .opacity(show ? 1 : 0)
+                        .offset(y: show ? 0 : 12)
+                    }
+
+                    VStack(alignment: .leading) {
+                        Text(questionTitle)
+                            .font(.custom("AvenirNext-Bold", size: 22))
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))
+
+                        Text(questionSubtitle)
+                            .font(.custom("AvenirNext-Regular", size: 15))
+                            .foregroundStyle(Color(red: 0.32, green: 0.28, blue: 0.22))
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color.white.opacity(0.85))
+                            .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
+                    )
+                    .opacity(show ? 1 : 0)
+                    .offset(y: show ? 0 : 14)
+
+                    if showAnswerEditor {
+                        answerEditor
+                    } else {
+                        answersSection
+                    }
+
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showAnswerEditor.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text(showAnswerEditor ? "작성 닫기" : (viewModel.hasAnswered ? "작성 수정하기" : "작성하러 가기"))
+                                .font(.custom("AvenirNext-Bold", size: 17))
+                            Spacer()
+                        }
+                        .padding(.vertical, 14)
+                        .foregroundStyle(Color.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
+                        )
+                        .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 10)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .opacity(show ? 1 : 0)
+                    .offset(y: show ? 0 : 20)
+                }
+                .padding(24)
             }
-            .padding(24)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.5)) {
                 show = true
             }
             viewModel.loadQuestion()
+            viewModel.checkMyAnswer(token: authToken)
+            viewModel.setCurrentUserId(currentUserId)
+        }
+        .onChange(of: showAnswerEditor) { _, newValue in
+            if newValue {
+                answerText = viewModel.myAnswerContent ?? ""
+                isPublicAnswer = viewModel.myAnswerIsPublic
+            }
+        }
+        .onChange(of: viewModel.didSaveAnswer) { _, newValue in
+            if newValue {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    showAnswerEditor = false
+                }
+                viewModel.didSaveAnswer = false
+            }
         }
         .sheet(isPresented: $showAdminSheet) {
             adminSheet
@@ -234,6 +253,90 @@ struct MainView: View {
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
+    private var answersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("다른 사람들의 답변")
+                .font(.custom("AvenirNext-DemiBold", size: 15))
+                .foregroundStyle(Color(red: 0.28, green: 0.24, blue: 0.18))
+
+            if viewModel.isAnswersUnlocked {
+                if viewModel.isLoadingAnswers {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else if let notice = viewModel.answersNotice {
+                    Text(notice)
+                        .font(.custom("AvenirNext-Regular", size: 13))
+                        .foregroundStyle(Color(red: 0.72, green: 0.20, blue: 0.18))
+                } else {
+                    ForEach(viewModel.visibleAnswers) { answer in
+                        answerRow(answer)
+                            .onAppear {
+                                if answer.id == viewModel.visibleAnswers.last?.id {
+                                    viewModel.loadMoreAnswers()
+                                }
+                            }
+                    }
+                }
+            } else {
+                Button {
+                    viewModel.unlockAnswers(token: authToken)
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text("다른 사람의 답변 보기")
+                            .font(.custom("AvenirNext-Bold", size: 15))
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
+                    .foregroundStyle(Color.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
+                    )
+                }
+
+                if let notice = viewModel.answersNotice {
+                    Text(notice)
+                        .font(.custom("AvenirNext-Regular", size: 13))
+                        .foregroundStyle(Color(red: 0.72, green: 0.20, blue: 0.18))
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.75))
+                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+        )
+        .transition(.opacity)
+    }
+
+    private func answerRow(_ answer: AnswerPublic) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("사용자 \(answer.userId)")
+                    .font(.custom("AvenirNext-DemiBold", size: 13))
+                    .foregroundStyle(Color(red: 0.28, green: 0.24, blue: 0.18))
+
+                Spacer()
+
+                Text("\(answer.likeCount) 추천")
+                    .font(.custom("AvenirNext-Regular", size: 12))
+                    .foregroundStyle(Color(red: 0.44, green: 0.38, blue: 0.30))
+            }
+
+            Text(answer.content)
+                .font(.custom("AvenirNext-Regular", size: 14))
+                .foregroundStyle(Color(red: 0.24, green: 0.22, blue: 0.18))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.9))
+        )
+    }
+
     private var adminSheet: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
@@ -305,5 +408,6 @@ struct MainView: View {
 }
 
 #Preview {
-    MainView(onLogout: {}, isAdmin: true, authToken: nil)
+//    MainView(onLogout: {}, isAdmin: true, authToken: nil, currentUserId: nil)
+    MainView(onLogout : {}, isAdmin: false, authToken: nil, currentUserId: nil)
 }

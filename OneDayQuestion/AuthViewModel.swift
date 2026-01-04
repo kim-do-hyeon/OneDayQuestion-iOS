@@ -21,6 +21,7 @@ final class AuthViewModel: ObservableObject {
     @Published var accessToken: String?
     @Published var isLoggedIn = false
     @Published var isAdmin = false
+    @Published var userId: Int?
 
     private let service: AuthService
 
@@ -83,6 +84,7 @@ final class AuthViewModel: ObservableObject {
                 KeychainService.saveToken(token.accessToken)
                 let profile = try await service.fetchMe(token: token.accessToken)
                 isAdmin = profile.isAdmin
+                userId = profile.id
                 successMessage = "환영합니다!"
                 isLoggedIn = true
             }
@@ -98,6 +100,7 @@ final class AuthViewModel: ObservableObject {
         accessToken = nil
         isLoggedIn = false
         isAdmin = false
+        userId = nil
         emailOrUsername = ""
         password = ""
         confirmPassword = ""
@@ -118,11 +121,13 @@ final class AuthViewModel: ObservableObject {
             let profile = try await service.fetchMe(token: token)
             accessToken = token
             isAdmin = profile.isAdmin
+            userId = profile.id
             isLoggedIn = true
         } catch {
             KeychainService.deleteToken()
             accessToken = nil
             isAdmin = false
+            userId = nil
             isLoggedIn = false
         }
 

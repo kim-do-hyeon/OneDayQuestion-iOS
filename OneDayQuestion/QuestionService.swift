@@ -19,6 +19,28 @@ struct QuestionPublic: Decodable {
     }
 }
 
+struct AnswerPublic: Decodable, Identifiable {
+    let id: Int
+    let userId: Int
+    let questionId: Int
+    let content: String
+    let isPublic: Bool
+    let createdAt: Date
+    let updatedAt: Date
+    let likeCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case questionId = "question_id"
+        case content
+        case isPublic = "is_public"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case likeCount = "like_count"
+    }
+}
+
 struct AnswerMineResponse: Decodable {
     let id: Int
     let questionId: Int
@@ -140,6 +162,54 @@ final class QuestionService {
         }
     }
 
+    func fetchPublicAnswers(token: String) async throws -> [AnswerPublic] {
+        let url = baseURL.appendingPathComponent("questions/today/answers")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw QuestionServiceError.invalidResponse
+        }
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let apiError = try? decoder.decode(APIErrorResponse.self, from: data),
+               let detail = apiError.detail {
+                throw QuestionServiceError.api(detail)
+            }
+            throw QuestionServiceError.api("요청에 실패했습니다. (\(httpResponse.statusCode))")
+        }
+        do {
+            return try decoder.decode([AnswerPublic].self, from: data)
+        } catch {
+            throw QuestionServiceError.invalidResponse
+        }
+    }
+
+    func fetchMyAnswer(token: String) async throws -> AnswerMineResponse {
+        let url = baseURL.appendingPathComponent("questions/today/my-answer")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw QuestionServiceError.invalidResponse
+        }
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let apiError = try? decoder.decode(APIErrorResponse.self, from: data),
+               let detail = apiError.detail {
+                throw QuestionServiceError.api(detail)
+            }
+            throw QuestionServiceError.api("요청에 실패했습니다. (\(httpResponse.statusCode))")
+        }
+        do {
+            return try decoder.decode(AnswerMineResponse.self, from: data)
+        } catch {
+            throw QuestionServiceError.invalidResponse
+        }
+    }
+
     func submitTodayAnswer(content: String, isPublic: Bool, token: String) async throws -> AnswerMineResponse {
         let url = baseURL.appendingPathComponent("questions/today/answer")
         var request = URLRequest(url: url)
@@ -187,6 +257,16 @@ final class QuestionService {
         }
 
         fallback.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = fallback.date(from: value) {
+            return date
+        }
+
+        fallback.dateFormat = "yyyy-MM-dd HH:mm:ss.SSSSSS"
+        if let date = fallback.date(from: value) {
+            return date
+        }
+
+        fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let date = fallback.date(from: value) {
             return date
         }

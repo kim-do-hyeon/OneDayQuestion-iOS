@@ -19,6 +19,24 @@ struct QuestionPublic: Decodable {
     }
 }
 
+struct AnswerMineResponse: Decodable {
+    let id: Int
+    let questionId: Int
+    let content: String
+    let isPublic: Bool
+    let createdAt: Date
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case questionId = "question_id"
+        case content
+        case isPublic = "is_public"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
 struct QuestionCreatePayload: Encodable {
     let questionDate: String
     let prompt: String
@@ -117,6 +135,37 @@ final class QuestionService {
         }
         do {
             return try decoder.decode(QuestionPublic.self, from: data)
+        } catch {
+            throw QuestionServiceError.invalidResponse
+        }
+    }
+
+    func submitTodayAnswer(content: String, isPublic: Bool, token: String) async throws -> AnswerMineResponse {
+        let url = baseURL.appendingPathComponent("questions/today/answer")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let payload: [String: Any] = [
+            "content": content,
+            "is_public": isPublic
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw QuestionServiceError.invalidResponse
+        }
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let apiError = try? decoder.decode(APIErrorResponse.self, from: data),
+               let detail = apiError.detail {
+                throw QuestionServiceError.api(detail)
+            }
+            throw QuestionServiceError.api("요청에 실패했습니다. (\(httpResponse.statusCode))")
+        }
+        do {
+            return try decoder.decode(AnswerMineResponse.self, from: data)
         } catch {
             throw QuestionServiceError.invalidResponse
         }

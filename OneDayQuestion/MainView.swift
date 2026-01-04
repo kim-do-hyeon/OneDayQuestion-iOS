@@ -14,6 +14,9 @@ struct MainView: View {
     @State private var showAdminSheet = false
     @State private var newQuestionDate = Date()
     @State private var newQuestionPrompt = ""
+    @State private var showAnswerEditor = false
+    @State private var answerText = ""
+    @State private var isPublicAnswer = true
     let isAdmin: Bool
     let authToken: String?
     private let dateFormatter: DateFormatter = {
@@ -93,12 +96,18 @@ struct MainView: View {
                 .opacity(show ? 1 : 0)
                 .offset(y: show ? 0 : 14)
 
+                if showAnswerEditor {
+                    answerEditor
+                }
+
                 Button {
-                    // TODO: 답변 작성 화면으로 이동
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showAnswerEditor.toggle()
+                    }
                 } label: {
                     HStack {
                         Spacer()
-                        Text("작성하러 가기")
+                        Text(showAnswerEditor ? "작성 닫기" : "작성하러 가기")
                             .font(.custom("AvenirNext-Bold", size: 17))
                         Spacer()
                     }
@@ -150,6 +159,79 @@ struct MainView: View {
             return error
         }
         return "관리자가 질문을 등록하면 바로 보여드릴게요."
+    }
+
+    private var answerEditor: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("오늘의 답변")
+                .font(.custom("AvenirNext-DemiBold", size: 14))
+                .foregroundStyle(Color(red: 0.28, green: 0.24, blue: 0.18))
+
+            TextEditor(text: $answerText)
+                .frame(minHeight: 140)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.85))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                )
+
+            Button {
+                isPublicAnswer.toggle()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: isPublicAnswer ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text(isPublicAnswer ? "공개 답변" : "비공개 답변")
+                        .font(.custom("AvenirNext-DemiBold", size: 14))
+                }
+                .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.12))
+            }
+
+            if let notice = viewModel.answerNotice {
+                Text(notice)
+                    .font(.custom("AvenirNext-Regular", size: 13))
+                    .foregroundStyle(notice == "답변이 저장되었습니다." ? Color(red: 0.16, green: 0.45, blue: 0.26) : Color(red: 0.72, green: 0.20, blue: 0.18))
+            }
+
+            Button {
+                viewModel.submitAnswer(
+                    content: answerText,
+                    isPublic: isPublicAnswer,
+                    token: authToken
+                )
+            } label: {
+                HStack {
+                    Spacer()
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text("답변 저장")
+                            .font(.custom("AvenirNext-Bold", size: 16))
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+                .foregroundStyle(Color.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color(red: 0.20, green: 0.18, blue: 0.12))
+                )
+            }
+            .disabled(viewModel.isSubmitting)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.75))
+                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     private var adminSheet: some View {
